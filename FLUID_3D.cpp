@@ -150,10 +150,12 @@ FLUID_3D::FLUID_3D(int xRes, int yRes, int zRes, int amplify) :
       if(DOMAIN_BC_RIGHT==1) _obstacles[index] = 1;
     }
 
+/*
 	SPHERE *obsSphere = NULL; 
 	obsSphere = new SPHERE(0.375,0.5,0.375, 0.1); // for 4 to 3 domain 
 	addObstacle(obsSphere);
   delete obsSphere;
+  //*/
 }
 
 FLUID_3D::~FLUID_3D()
@@ -493,11 +495,11 @@ void FLUID_3D::setObstacleBoundaries()
 					pcnt += 1.;
 				}
 				if (top && !bottom) {
-					_pressure[index] += _pressure[index - _xRes];
+					_pressure[index] += _pressure[index - _slabSize];
 					pcnt += 1.;
 				}
 				if (!top && bottom) {
-					_pressure[index] += _pressure[index + _xRes];
+					_pressure[index] += _pressure[index + _slabSize];
 					pcnt += 1.;
 				}
 				_pressure[index] /= pcnt; 
@@ -548,7 +550,7 @@ void FLUID_3D::addVorticity()
 				float dz  = (out == index || in == index) ? 1.0f / _dx : gridSize;
 				int right = _obstacles[index + 1] ? index : index + 1;
 				int left  = _obstacles[index - 1] ? index : index - 1;
-				float dx  = (right == index || right == index) ? 1.0f / _dx : gridSize;
+				float dx  = (right == index || left == index) ? 1.0f / _dx : gridSize;
 
 				_xVorticity[index] = (_zVelocity[up] - _zVelocity[down]) * dy + (-_yVelocity[out] + _yVelocity[in]) * dz;
 				_yVorticity[index] = (_xVelocity[out] - _xVelocity[in]) * dz + (-_zVelocity[right] + _zVelocity[left]) * dx;
@@ -577,7 +579,7 @@ void FLUID_3D::addVorticity()
 					float dz  = (out == index || in == index) ? 1.0f / _dx : gridSize;
 					int right = _obstacles[index + 1] ? index : index + 1;
 					int left  = _obstacles[index - 1] ? index : index - 1;
-					float dx  = (right == index || right == index) ? 1.0f / _dx : gridSize;
+					float dx  = (right == index || left == index) ? 1.0f / _dx : gridSize;
 					N[0] = (_vorticity[right] - _vorticity[left]) * dx; 
 					N[1] = (_vorticity[up] - _vorticity[down]) * dy;
 					N[2] = (_vorticity[out] - _vorticity[in]) * dz;
@@ -626,8 +628,8 @@ void FLUID_3D::advectMacCormack()
 	float* t1 = _xForce;
 	float* t2 = _yForce;
 
-	advectFieldMacCormack(dt0, _xVelocityOld, _yVelocityOld, _zVelocityOld, _densityOld, _density, t1,t2, res, NULL); 
-	advectFieldMacCormack(dt0, _xVelocityOld, _yVelocityOld, _zVelocityOld, _heatOld, _heat, t1,t2, res, NULL); 
+	advectFieldMacCormack(dt0, _xVelocityOld, _yVelocityOld, _zVelocityOld, _densityOld,   _density,   t1,t2, res, NULL); 
+	advectFieldMacCormack(dt0, _xVelocityOld, _yVelocityOld, _zVelocityOld, _heatOld,      _heat,      t1,t2, res, NULL); 
 	advectFieldMacCormack(dt0, _xVelocityOld, _yVelocityOld, _zVelocityOld, _xVelocityOld, _xVelocity, t1,t2, res, NULL);
 	advectFieldMacCormack(dt0, _xVelocityOld, _yVelocityOld, _zVelocityOld, _yVelocityOld, _yVelocity, t1,t2, res, NULL);
 	advectFieldMacCormack(dt0, _xVelocityOld, _yVelocityOld, _zVelocityOld, _zVelocityOld, _zVelocity, t1,t2, res, NULL);
