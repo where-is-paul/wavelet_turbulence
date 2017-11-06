@@ -44,6 +44,18 @@ static const float persistence = 0.56123f;
 //////////////////////////////////////////////////////////////////////
 WTURBULENCE::WTURBULENCE(int xResSm, int yResSm, int zResSm, int amplify)
 {
+  unsigned resolution = 256;
+  float K_ = 1.0;
+  float a_ = 0.05;
+  float F_0_ = 0.0625;
+  float omega_0_ = M_PI / 4.0;
+  float omega_1_ = M_PI / 4.0;
+  float number_of_impulses_per_kernel = 64.0;
+  unsigned period = 128;
+  unsigned random_offset = std::time(0);
+
+  _noise = new noise3d(K_, a_, F_0_, omega_0_, omega_1_, number_of_impulses_per_kernel, period, random_offset);
+
   // if noise magnitude is below this threshold, its contribution
   // is negilgible, so stop evaluating new octaves
   _cullingThreshold = 1e-3;

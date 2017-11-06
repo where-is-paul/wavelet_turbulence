@@ -23,6 +23,8 @@
 #define WTURBULENCE_H
 
 #include "VEC3.h"
+#include "GABOR_NOISE.h"
+
 using namespace BasicVector;
 class SIMPLE_PARSER;
 
@@ -136,6 +138,7 @@ class WTURBULENCE
 
     // highest frequency component of wavelet decomposition
     float* _highFreqEnergy;
+    noise3d* _noise;
     
     void computeEigenvalues();
     void decomposeEnergy();
