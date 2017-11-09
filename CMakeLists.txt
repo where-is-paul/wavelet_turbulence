@@ -31,5 +31,13 @@ set( WTURB_SOURCES
 	WTURBULENCE.cpp
 )
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 add_executable( FLUID_3D ${WTURB_SOURCES} ${WTURB_HEADERS} )
 target_link_libraries(FLUID_3D ${ZLIB_LIBRARIES} ${PNG_LIBRARIES})

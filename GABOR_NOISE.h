@@ -34,6 +34,7 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <map>
 
 #include <VEC3.h>
 #include <MERSENNETWISTER.h>
@@ -85,11 +86,11 @@ static inline float gabor_derivative(float K, float a, float F_0, float omega_0,
   float sinusoidal_carrier = std::cos(c_arg);
   float derivative;
   if (dir == 0) {
-    derivative = -2 * M_PI * (a * a * x + cos(omega_0) * sin(omega_1) * tan(c_arg));
+    derivative = -2 * M_PI * (a * a * x + F_0 * cos(omega_0) * sin(omega_1) * tan(c_arg));
   } else if (dir == 1) {
-    derivative = -2 * M_PI * (a * a * y + sin(omega_0) * sin(omega_1) * tan(c_arg));
+    derivative = -2 * M_PI * (a * a * y + F_0 * sin(omega_0) * sin(omega_1) * tan(c_arg));
   } else {
-    derivative = -2 * M_PI * (a * a * z + cos(omega_1) * tan(c_arg));
+    derivative = -2 * M_PI * (a * a * z + F_0 * cos(omega_1) * tan(c_arg));
   }
   return gaussian_envelop * sinusoidal_carrier * derivative;
 }
@@ -106,6 +107,9 @@ public:
   }
   float operator()(float x, float y, float z) const
   {
+    static std::map<float, std::map<float, std::map<float, float> > > memo;
+    if (memo.count(x) && memo[x].count(y) && memo[x][y].count(z)) return memo[x][y][z];
+
     x /= kernel_radius_, y /= kernel_radius_, z /= kernel_radius_;
     float int_x = std::floor(x), int_y = std::floor(y), int_z = std::floor(z);
     float frac_x = x - int_x, frac_y = y - int_y, frac_z = z - int_z;
@@ -118,7 +122,7 @@ public:
         }
       }
     }
-    return noise;
+    return memo[x][y][z] = noise;
   }
   float cell(int i, int j, int k, float x, float y, float z) const
   {
@@ -191,8 +195,8 @@ public:
       float y_i_y = y - y_i;
       float z_i_z = z - z_i;
       if (((x_i_x * x_i_x) + (y_i_y * y_i_y) + (z_i_z * z_i_z)) < 1.0) {
-        noise += w_i * gabor_derivative(K_, a_, F_0_, omega_0_, omega_1_, x_i_x * kernel_radius_, y_i_y * kernel_radius_, z_i_z * kernel_radius_, dir); // anisotropic
-        //noise += w_i * gabor_derivative(K_, a_, F_0_, omega_0_i, omega_1_i, x_i_x * kernel_radius_, y_i_y * kernel_radius_, z_i_z * kernel_radius_, dir); // isotropic
+        //noise += w_i * gabor_derivative(K_, a_, F_0_, omega_0_, omega_1_, x_i_x * kernel_radius_, y_i_y * kernel_radius_, z_i_z * kernel_radius_, dir); // anisotropic
+        noise += w_i * gabor_derivative(K_, a_, F_0_, omega_0_i, omega_1_i, x_i_x * kernel_radius_, y_i_y * kernel_radius_, z_i_z * kernel_radius_, dir); // isotropic
       }
     }
     return noise;
@@ -210,6 +214,7 @@ private:
   unsigned random_offset_;
 };
 
+/*
 //////////////////////////////////////////////////////////////////////////////////////////
 // x derivative of noise
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -230,5 +235,138 @@ static inline float GNoiseDy(Vec3 p, noise3d* data) {
 static inline float GNoiseDz(Vec3 p, noise3d* data) { 
   return data->derivative(p[0], p[1], p[2], 2);
 }
+*/
 
+#define NOISE_TILE_SIZE 128
+
+// warning - noiseTileSize has to be 128^3!
+#define modFast128(x) ((x) & 127)
+#define modFast64(x)  ((x) & 63)
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// x derivative of noise
+//////////////////////////////////////////////////////////////////////////////////////////
+static inline float GNoiseDx(Vec3 p, noise3d* data) { 
+  int i, f[3], c[3], mid[3], n = NOISE_TILE_SIZE;
+  float w[3][3], t, result = 0;
+  
+  mid[0] = ceil(p[0] - 0.5); 
+  t = mid[0] - (p[0] - 0.5);
+  w[0][0] = -t;
+  w[0][2] = (1.f - t);
+  w[0][1] = 2.0f * t - 1.0f;
+  
+  mid[1] = ceil(p[1] - 0.5); 
+  t = mid[1] - (p[1] - 0.5);
+  w[1][0] = t * t / 2; 
+  w[1][2] = (1 - t) * (1 - t) / 2;
+  w[1][1] = 1 - w[1][0] - w[1][2];
+
+  mid[2] = ceil(p[2] - 0.5); 
+  t = mid[2] - (p[2] - 0.5);
+  w[2][0] = t * t / 2; 
+  w[2][2] = (1 - t) * (1 - t)/2; 
+  w[2][1] = 1 - w[2][0] - w[2][2];
+ 
+  // to optimize, explicitly unroll this loop
+  for (int z = -1; z <=1; z++)
+    for (int y = -1; y <=1; y++)
+      for (int x = -1; x <=1; x++)
+      {
+        float weight = 1.0f;
+        c[0] = modFast128(mid[0] + x);
+        weight *= w[0][x+1];
+        c[1] = modFast128(mid[1] + y);
+        weight *= w[1][y+1];
+        c[2] = modFast128(mid[2] + z);
+        weight *= w[2][z+1];
+        result += weight * (*data)(c[0], c[1], c[2]);
+      }
+ return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// y derivative of noise
+//////////////////////////////////////////////////////////////////////////////////////////
+static inline float GNoiseDy(Vec3 p, noise3d* data) { 
+  int i, f[3], c[3], mid[3], n=NOISE_TILE_SIZE; 
+  float w[3][3], t, result =0;
+  
+  mid[0] = ceil(p[0] - 0.5); 
+  t = mid[0]-(p[0] - 0.5);
+  w[0][0] = t * t / 2; 
+  w[0][2] = (1 - t) * (1 - t) / 2;
+  w[0][1] = 1 - w[0][0] - w[0][2];
+  
+  mid[1] = ceil(p[1] - 0.5); 
+  t = mid[1]-(p[1] - 0.5);
+  w[1][0] = -t;
+  w[1][2] = (1.f - t);
+  w[1][1] = 2.0f * t - 1.0f;
+
+  mid[2] = ceil(p[2] - 0.5); 
+  t = mid[2] - (p[2] - 0.5);
+  w[2][0] = t * t / 2; 
+  w[2][2] = (1 - t) * (1 - t)/2; 
+  w[2][1] = 1 - w[2][0] - w[2][2];
+  
+  // to optimize, explicitly unroll this loop
+  for (int z = -1; z <=1; z++)
+    for (int y = -1; y <=1; y++)
+      for (int x = -1; x <=1; x++)
+      {
+        float weight = 1.0f;
+        c[0] = modFast128(mid[0] + x);
+        weight *= w[0][x+1];
+        c[1] = modFast128(mid[1] + y);
+        weight *= w[1][y+1];
+        c[2] = modFast128(mid[2] + z);
+        weight *= w[2][z+1];
+        result += weight * (*data)(c[0], c[1], c[2]);
+      }
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// z derivative of noise
+//////////////////////////////////////////////////////////////////////////////////////////
+static inline float GNoiseDz(Vec3 p, noise3d* data) { 
+  int i, f[3], c[3], mid[3], n=NOISE_TILE_SIZE; 
+  float w[3][3], t, result =0;
+
+  mid[0] = ceil(p[0] - 0.5); 
+  t = mid[0]-(p[0] - 0.5);
+  w[0][0] = t * t / 2; 
+  w[0][2] = (1 - t) * (1 - t) / 2;
+  w[0][1] = 1 - w[0][0] - w[0][2];
+  
+  mid[1] = ceil(p[1] - 0.5); 
+  t = mid[1]-(p[1] - 0.5);
+  w[1][0] = t * t / 2; 
+  w[1][2] = (1 - t) * (1 - t) / 2;
+  w[1][1] = 1 - w[1][0] - w[1][2];
+
+  mid[2] = ceil(p[2] - 0.5); 
+  t = mid[2] - (p[2] - 0.5);
+  w[2][0] = -t;
+  w[2][2] = (1.f - t);
+  w[2][1] = 2.0f * t - 1.0f;
+
+  // to optimize, explicitly unroll this loop
+  for (int z = -1; z <=1; z++)
+    for (int y = -1; y <=1; y++)
+      for (int x = -1; x <=1; x++)
+      {
+        float weight = 1.0f;
+        c[0] = modFast128(mid[0] + x);
+        weight *= w[0][x+1];
+        c[1] = modFast128(mid[1] + y);
+        weight *= w[1][y+1];
+        c[2] = modFast128(mid[2] + z);
+        weight *= w[2][z+1];
+        result += weight * (*data)(c[0], c[1], c[2]);
+      }
+  return result;
+}
 #endif
