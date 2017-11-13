@@ -133,15 +133,16 @@ WTURBULENCE::WTURBULENCE(int xResSm, int yResSm, int zResSm, int amplify)
     _eigMin[i] = _eigMax[i] =  0.;
 
   // noise tiles
-  //_noiseTile = new float[noiseTileSize * noiseTileSize * noiseTileSize];
+  int n3 = noiseTileSize * noiseTileSize * noiseTileSize;
+  _noiseTile = new float[n3];
   //std::string noiseTileFilename = std::string("noise.wavelets");
   //std::string noiseTileFilename = std::string("noise.fft");
   //generateTile(_noiseTile, noiseTileFilename);
 
   unsigned resolution = noiseTileSize;
   float K_ = 1.0;
-  float a_ = 0.05;
-  float F_0_ = 1.0 / _xResSm;
+  float F_0_ = _xResSm / (2 * M_PI);
+  float a_ = 4 / F_0_;
   float omega_0_ = M_PI / 4.0;
   float omega_1_ = M_PI / 4.0;
   float number_of_impulses_per_kernel = 64.0;
@@ -149,6 +150,19 @@ WTURBULENCE::WTURBULENCE(int xResSm, int yResSm, int zResSm, int amplify)
   unsigned random_offset = std::time(0);
 
   _noise = new noise3d(K_, a_, F_0_, omega_0_, omega_1_, number_of_impulses_per_kernel, period, random_offset);
+  float minVal = 1e10, maxVal = -1e10;
+  for (int i = 0; i < n3; i++) {
+    _noiseTile[i] = (*_noise)(i%noiseTileSize, (i/noiseTileSize)%noiseTileSize, i/noiseTileSize/noiseTileSize);
+    minVal = std::min(minVal, _noiseTile[i]);
+    maxVal = std::max(maxVal, _noiseTile[i]);
+  }
+  double c = (minVal + maxVal) / 2;
+  //for (int i = 0; i < n3; i++) {
+    //_noiseTile[i] -= c;
+    //_noiseTile[i] /= 0.1 * (maxVal - minVal);
+  //}
+
+  std::cout << "Init wturb " << c << " " << maxVal - minVal << " " << minVal << " " << maxVal << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -172,7 +186,7 @@ WTURBULENCE::~WTURBULENCE() {
 
   delete[] _eigMin;
   delete[] _eigMax;
-  //delete[] _noiseTile;
+  delete[] _noiseTile;
 
   delete[] _energy;
   delete[] _highFreqEnergy;
@@ -513,14 +527,14 @@ Vec3 WTURBULENCE::WVelocity(Vec3 orgPos)
   const Vec3 p2 = orgPos + Vec3(0,NOISE_TILE_SIZE/2,0);
   const Vec3 p3 = orgPos + Vec3(0,0,NOISE_TILE_SIZE/2);
 
-  const float f1y = GNoiseDy(p1, _noise);
-  const float f1z = GNoiseDz(p1, _noise);
+  const float f1y = WNoiseDy(p1, _noiseTile);
+  const float f1z = WNoiseDz(p1, _noiseTile);
 
-  const float f2x = GNoiseDx(p2, _noise);
-  const float f2z = GNoiseDz(p2, _noise);
+  const float f2x = WNoiseDx(p2, _noiseTile);
+  const float f2z = WNoiseDz(p2, _noiseTile);
 
-  const float f3x = GNoiseDx(p3, _noise);
-  const float f3y = GNoiseDy(p3, _noise);
+  const float f3x = WNoiseDx(p3, _noiseTile);
+  const float f3y = WNoiseDy(p3, _noiseTile);
 
   Vec3 ret = Vec3( 
       f3y - f2z,
@@ -540,23 +554,23 @@ Vec3 WTURBULENCE::WVelocityWithJacobian(Vec3 orgPos, float* xUnwarped, float* yU
   const Vec3 p3 = orgPos + Vec3(0,0,NOISE_TILE_SIZE/2);
 
   Vec3 final;
-  final[0] = GNoiseDx(p1, _noise);
-  final[1] = GNoiseDy(p1, _noise);
-  final[2] = GNoiseDz(p1, _noise);
+  final[0] = WNoiseDx(p1, _noiseTile);
+  final[1] = WNoiseDy(p1, _noiseTile);
+  final[2] = WNoiseDz(p1, _noiseTile);
   const float f1x = xUnwarped[0] * final[0] + xUnwarped[1] * final[1] + xUnwarped[2] * final[2];
   const float f1y = yUnwarped[0] * final[0] + yUnwarped[1] * final[1] + yUnwarped[2] * final[2];
   const float f1z = zUnwarped[0] * final[0] + zUnwarped[1] * final[1] + zUnwarped[2] * final[2];
 
-  final[0] = GNoiseDx(p2, _noise);
-  final[1] = GNoiseDy(p2, _noise);
-  final[2] = GNoiseDz(p2, _noise);
+  final[0] = WNoiseDx(p2, _noiseTile);
+  final[1] = WNoiseDy(p2, _noiseTile);
+  final[2] = WNoiseDz(p2, _noiseTile);
   const float f2x = xUnwarped[0] * final[0] + xUnwarped[1] * final[1] + xUnwarped[2] * final[2];
   const float f2y = yUnwarped[0] * final[0] + yUnwarped[1] * final[1] + yUnwarped[2] * final[2];
   const float f2z = zUnwarped[0] * final[0] + zUnwarped[1] * final[1] + zUnwarped[2] * final[2];
 
-  final[0] = GNoiseDx(p3, _noise);
-  final[1] = GNoiseDy(p3, _noise);
-  final[2] = GNoiseDz(p3, _noise);
+  final[0] = WNoiseDx(p3, _noiseTile);
+  final[1] = WNoiseDy(p3, _noiseTile);
+  final[2] = WNoiseDz(p3, _noiseTile);
   const float f3x = xUnwarped[0] * final[0] + xUnwarped[1] * final[1] + xUnwarped[2] * final[2];
   const float f3y = yUnwarped[0] * final[0] + yUnwarped[1] * final[1] + yUnwarped[2] * final[2];
   const float f3z = zUnwarped[0] * final[0] + zUnwarped[1] * final[1] + zUnwarped[2] * final[2];

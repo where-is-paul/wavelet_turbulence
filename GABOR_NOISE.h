@@ -145,8 +145,8 @@ public:
       float y_i_y = y - y_i;
       float z_i_z = z - z_i;
       if (((x_i_x * x_i_x) + (y_i_y * y_i_y) + (z_i_z * z_i_z)) < 1.0) {
-        noise += w_i * gabor(K_, a_, F_0_, omega_0_, omega_1_, x_i_x * kernel_radius_, y_i_y * kernel_radius_, z_i_z * kernel_radius_); // anisotropic
-        //noise += w_i * gabor(K_, a_, F_0_, omega_0_i, omega_1_i, x_i_x * kernel_radius_, y_i_y * kernel_radius_, z_i_z * kernel_radius_); // isotropic
+        //noise += w_i * gabor(K_, a_, F_0_, omega_0_, omega_1_, x_i_x * kernel_radius_, y_i_y * kernel_radius_, z_i_z * kernel_radius_); // anisotropic
+        noise += w_i * gabor(K_, a_, F_0_, omega_0_i, omega_1_i, x_i_x * kernel_radius_, y_i_y * kernel_radius_, z_i_z * kernel_radius_); // isotropic
       }
     }
     return noise;

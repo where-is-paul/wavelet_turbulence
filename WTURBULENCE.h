@@ -130,7 +130,7 @@ class WTURBULENCE
 		float* _energy;
 
 		// noise data
-		//float* _noiseTile;
+		float* _noiseTile;
 		//float* _noiseTileExt;
 
 		// step counter
