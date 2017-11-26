@@ -139,6 +139,7 @@ WTURBULENCE::WTURBULENCE(int xResSm, int yResSm, int zResSm, int amplify)
   //std::string noiseTileFilename = std::string("noise.fft");
   //generateTile(_noiseTile, noiseTileFilename);
 
+/*
   unsigned resolution = noiseTileSize;
   float K_ = 1.0;
   float F_0_ = _xResSm / (2 * M_PI);
@@ -150,19 +151,31 @@ WTURBULENCE::WTURBULENCE(int xResSm, int yResSm, int zResSm, int amplify)
   unsigned random_offset = std::time(0);
 
   _noise = new noise3d(K_, a_, F_0_, omega_0_, omega_1_, number_of_impulses_per_kernel, period, random_offset);
-  float minVal = 1e10, maxVal = -1e10;
-  for (int i = 0; i < n3; i++) {
-    _noiseTile[i] = (*_noise)(i%noiseTileSize, (i/noiseTileSize)%noiseTileSize, i/noiseTileSize/noiseTileSize);
-    minVal = std::min(minVal, _noiseTile[i]);
-    maxVal = std::max(maxVal, _noiseTile[i]);
+  
+  int c = 0;
+  for (g_t = 0; g_t < 2*M_PI; g_t += 2*M_PI / 100) {
+    //float minVal = 1e10, maxVal = -1e10;
+    
+    stringstream ss;
+    ss << "gabor_noise" << c << ".gabor";
+    c++;
+
+    for (int i = 0; i < n3; i++) {
+      _noiseTile[i] = (*_noise)(i%noiseTileSize, (i/noiseTileSize)%noiseTileSize, i/noiseTileSize/noiseTileSize);
+      //minVal = std::min(minVal, _noiseTile[i]);
+      //maxVal = std::max(maxVal, _noiseTile[i]);
+    }
+
+    saveTile(_noiseTile, ss.str());
+    std::cout << "Generating noise tile " << c << endl;
   }
-  double c = (minVal + maxVal) / 2;
+  //double c = (minVal + maxVal) / 2;
   //for (int i = 0; i < n3; i++) {
     //_noiseTile[i] -= c;
     //_noiseTile[i] /= 0.1 * (maxVal - minVal);
   //}
-
-  std::cout << "Init wturb " << c << " " << maxVal - minVal << " " << minVal << " " << maxVal << std::endl;
+*/
+  //std::cout << "Init wturb " << c << " " << maxVal - minVal << " " << minVal << " " << maxVal << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -587,6 +600,12 @@ Vec3 WTURBULENCE::WVelocityWithJacobian(Vec3 orgPos, float* xUnwarped, float* yU
 //////////////////////////////////////////////////////////////////////
 void WTURBULENCE::stepTurbulenceReadable(float dtOrg, float* xvel, float* yvel, float* zvel, unsigned char *obstacles) 
 {
+  static int c = 0;
+  if (rand()%13 == 0) c = (c + 1) % 100;
+  stringstream ss;
+  ss << "gabor_noise" << c << ".gabor";
+  loadTile(_noiseTile, ss.str());
+  std::cout << "loaded tile " << ss.str() << std::endl;
   // enlarge timestep to match grid
   const float dt = dtOrg * _amplify;
   const float invAmp = 1.0f / _amplify;

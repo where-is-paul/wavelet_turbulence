@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
   cout << "   http://www.cs.cornell.edu/~tedkim/WTURB" << endl;
   cout << "=========================================================================" << endl;
 
-  int xRes = 48;
-  int yRes = 64;
-  int zRes = 48;
-  int amplify = 4;
+  int xRes = 12;
+  int yRes = 16;
+  int zRes = 12;
+  int amplify = 2;
   int totalCells = xRes * yRes * zRes;
   int amplifiedCells = totalCells * amplify * amplify * amplify;
   

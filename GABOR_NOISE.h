@@ -135,8 +135,11 @@ public:
     unsigned number_of_impulses = prng.poisson(number_of_impulses_per_cell);
     float noise = 0.0;
     for (unsigned i = 0; i < 1.5 * number_of_impulses; ++i) {
-      float x_i = prng.uniform_0_1();
-      float y_i = prng.uniform_0_1();
+      float xx = prng.uniform_0_1(), yy = prng.uniform_0_1();
+      if (xx > yy) swap(xx, yy);
+      float x_i = 0.8 * yy * cos(2 * M_PI * xx / yy + g_t) + 0.5;
+      float y_i = 0.8 * yy * sin(2 * M_PI * xx / yy + g_t) + 0.5;
+
       float z_i = prng.uniform_0_1();
       float w_i = prng.uniform(-1.0, +1.0);
       float omega_0_i = prng.uniform(0.0, 2.0 * M_PI);
