@@ -46,6 +46,9 @@ class FLUID_3D
 		void addSmokeColumn();
 		static void addSmokeTestCase(float* field, Vec3Int res);
 
+		void addSmokeBlob();
+		static void addSmokeBlobTestCase(float* field, Vec3Int res);
+
 		void step();
 		void addObstacle(OBSTACLE* obstacle);
 
@@ -116,6 +119,8 @@ class FLUID_3D
 		void addForce();
 		void addVorticity();
 		void addBuoyancy(float *field);
+		void addDiffuseForce(float *field);
+		void addDiffusion(float *field);
 
 		// solver stuff
 		void project();

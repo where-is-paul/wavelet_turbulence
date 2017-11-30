@@ -199,7 +199,7 @@ void FLUID_3D::step()
 
 	// run the solvers
   addVorticity();
-  addBuoyancy(_heat);
+  addDiffuseForce(_heat);
 	addForce();
 	project();
   diffuseHeat();
@@ -525,6 +525,35 @@ void FLUID_3D::addBuoyancy(float *field)
 		for (int y = 0; y < _yRes; y++)
 			for (int x = 0; x < _xRes; x++, index++) 
 				_yForce[index] += beta * field[index];
+}
+
+//////////////////////////////////////////////////////////////////////
+// add buoyancy forces
+//////////////////////////////////////////////////////////////////////
+void FLUID_3D::addDiffuseForce(float *field)
+{
+	int index = 0;
+
+	float beta = _buoyancy;
+	if(beta==0.) return;
+	for (int z = 0; z < _zRes; z++)
+		for (int y = 0; y < _yRes; y++)
+			for (int x = 0; x < _xRes; x++, index++) {
+				int prevX, prevY, prevZ;
+				if (x > 0) {
+					prevX = (x - 1) + y * _xRes + z * (_yRes * _xRes);
+					_xForce[index] += beta * (field[index] - field[prevX]) / _dx;
+				}
+				if (y > 0) {
+					prevY = x + (y - 1) * _xRes + z * (_yRes * _xRes);
+					_yForce[index] += beta * (field[index] - field[prevY]) / _dx;
+				}
+
+				if (z > 0) {
+					prevZ = x + y * _xRes + (z - 1) * (_yRes * _xRes);
+					_zForce[index] += beta * (field[index] - field[prevZ]) / _dx;
+				}
+			}
 }
 
 //////////////////////////////////////////////////////////////////////

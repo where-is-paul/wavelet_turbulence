@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 	FLUID_3D fluid(xRes, yRes, zRes, amplify);
   for (int x = 0; x < 300; x++)
   {
-    fluid.addSmokeColumn();
+    fluid.addSmokeBlob();
     fluid.step();
   }
 

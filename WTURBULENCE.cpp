@@ -135,9 +135,9 @@ WTURBULENCE::WTURBULENCE(int xResSm, int yResSm, int zResSm, int amplify)
   // noise tiles
   int n3 = noiseTileSize * noiseTileSize * noiseTileSize;
   _noiseTile = new float[n3];
-  //std::string noiseTileFilename = std::string("noise.wavelets");
+  std::string noiseTileFilename = std::string("noise.wavelets");
   //std::string noiseTileFilename = std::string("noise.fft");
-  //generateTile(_noiseTile, noiseTileFilename);
+  generateTile(_noiseTile, noiseTileFilename);
 
 /*
   unsigned resolution = noiseTileSize;
@@ -600,12 +600,14 @@ Vec3 WTURBULENCE::WVelocityWithJacobian(Vec3 orgPos, float* xUnwarped, float* yU
 //////////////////////////////////////////////////////////////////////
 void WTURBULENCE::stepTurbulenceReadable(float dtOrg, float* xvel, float* yvel, float* zvel, unsigned char *obstacles) 
 {
+  /*
   static int c = 0;
   if (rand()%13 == 0) c = (c + 1) % 100;
   stringstream ss;
   ss << "gabor_noise" << c << ".gabor";
   loadTile(_noiseTile, ss.str());
   std::cout << "loaded tile " << ss.str() << std::endl;
+  */
   // enlarge timestep to match grid
   const float dt = dtOrg * _amplify;
   const float invAmp = 1.0f / _amplify;
